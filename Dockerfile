@@ -19,11 +19,13 @@ RUN apt-get -qy install git vim-tiny curl wget pwgen \
   python-setuptools && \
   apt-get -q autoclean
 
+RUN apt-get -qy install vim
+
 # drush: instead of installing a package, pull via composer into /opt/composer
 # http://www.whaaat.com/installing-drush-7-using-composer
 RUN curl -sS https://getcomposer.org/installer | php && \
     mv composer.phar /usr/local/bin/composer && \
-    COMPOSER_HOME=/opt/composer composer --quiet global require drush/drush:dev-master && \
+    COMPOSER_HOME=/opt/composer composer --quiet global require drush/drush:8.* && \
     ln -s /opt/composer/vendor/drush/drush/drush /bin/drush
 # Add drush comand https://www.drupal.org/project/registry_rebuild
 RUN wget http://ftp.drupal.org/files/projects/registry_rebuild-7.x-2.2.tar.gz && \
@@ -93,13 +95,15 @@ ENV \
   ## Default Drupal settings
   DRUPAL_SITE_NAME="My Drupal Site" DRUPAL_SITE_EMAIL=drupal@example.ch \
   DRUPAL_ADMIN=admin DRUPAL_ADMIN_PW=admin \
-  DRUPAL_ADMIN_EMAIL=root@example.ch
+  DRUPAL_ADMIN_EMAIL=root@example.ch \
   #by default no second user  
   #DRUPAL_USER1=admin2 DRUPAL_USER1_PW=admin2 DRUPAL_USER1_EMAIL=drupal@example.ch ENV DRUPAL_USER1_ROLE=administrator
 
   # Run a custom command after the site is installed
   # Example: get, enable and run the production check module
   #DRUPAL_FINAL_CMD="drush -y dl prod_check && drush -y en prod_check && drush -y cache-clear drush && drush -y prod-check-prodmode"
+
+  DRUPAL_LOCAL_FOLDER=$HOME/$DRUPAL_VERSION;
 
 # /ENV
 
@@ -114,10 +118,6 @@ RUN chmod 755 /opt/postfix.sh
 ### Custom startup scripts
 RUN easy_install supervisor
 
-# Retrieve drupal: changed - now in start.sh to allow for makes too.
-# Push down a copy of drupal
-ADD ./files/drupal-7  /tmp/drupal
-
 ADD ./files/webfact_status.sh /tmp/webfact_status.sh
 ADD ./files/supervisord.conf /etc/supervisord.conf
 ADD ./files/supervisord.d    /etc/supervisord.d
@@ -127,6 +127,7 @@ ADD ./ubuntu1404/000-default.conf /etc/apache2/sites-available/000-default.conf
 ADD ./ubuntu1404/default-ssl.conf /etc/apache2/sites-available/default-ssl.conf
 ADD ./gitwrap.sh /gitwrap.sh
 ADD ./start.sh /start.sh
+ADD ./custom.sh /custom.sh
 
 
 VOLUME ["/var/www/html", "/data"]
@@ -134,8 +135,9 @@ VOLUME ["/var/www/html", "/data"]
 #WORKDIR /var/www/html
 WORKDIR /var
 # Automate starting of mysql+apache, allow bash for debugging
-RUN chmod 755 /start.sh /etc/apache2/foreground.sh
+RUN chmod 755 /start.sh /etc/apache2/foreground.sh /custom.sh
 EXPOSE 80
+EXPOSE 3306
 CMD ["/bin/bash", "/start.sh"]
 
 LABEL Description="Docker for Drupal Websites. Ubuntu 14.04 mysql+apache+drupal/composer/drush..." Version="1.2"
@@ -144,3 +146,7 @@ LABEL Description="Docker for Drupal Websites. Ubuntu 14.04 mysql+apache+drupal/
 # - "DEBIAN_FRONTEND noninteractive" should be prefixed on each line to avoid a default
 # - add more labels
 
+ADD ./tantaweb.sql /tantaweb.sql
+ADD ./tantacom-8.sql /tantacom-8.sql
+ADD ./files/web/tanta-6 /files/tanta-6
+ADD ./files/web/tanta-8 /files/tanta-8

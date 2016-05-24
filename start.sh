@@ -65,7 +65,9 @@ echo "02. check mysql"
     #  fi
     #fi
   fi
-
+  echo "02.1 expose mysql to outside container"
+  sed -i "s/.*bind-address.*/bind-address = 0.0.0.0/" /etc/mysql/my.cnf
+  echo "opened mysql"
 
 # is drupal already installed, or an internal or external DB?
 #if [[ ! -f $www/sites/default/settings.php ]] && [[ ! -f /drupal-db-pw.txt ]] && [[ $db_already -eq 0 ]]; then
@@ -89,7 +91,7 @@ if [[ ! -f $www/sites/default/settings.php ]] && [[ ! -f /drupal-db-pw.txt ]]   
     mkdir /var/log/mysql 2>/dev/null
     chown -R mysql /var/log/mysql 2>/dev/null
     ## mysql: start, make passwords, create DBs
-    /usr/bin/mysqld_safe --skip-syslog & 
+    /usr/bin/mysqld_safe --skip-syslog &
     if [[ $? -ne 0 ]]; then
       echo "ERROR: mysql will not start";
       exit;
@@ -109,7 +111,7 @@ if [[ ! -f $www/sites/default/settings.php ]] && [[ ! -f /drupal-db-pw.txt ]]   
     chmod 400 /mysql-root-pw.txt /drupal-db-pw.txt
     mysqladmin -u root password $MYSQL_ROOT_PASSWORD 
     #echo "CREATE DATABASE $MYSQL_DATABASE; GRANT ALL PRIVILEGES ON ${MYSQL_DATABASE}.* TO $MYSQL_USER@'localhost' IDENTIFIED BY '$MYSQL_PASSWORD'; FLUSH PRIVILEGES;"
-    mysql -uroot -p$MYSQL_ROOT_PASSWORD -e "CREATE DATABASE $MYSQL_DATABASE; GRANT ALL PRIVILEGES ON ${MYSQL_DATABASE}.* TO $MYSQL_USER@'localhost' IDENTIFIED BY '$MYSQL_PASSWORD'; FLUSH PRIVILEGES;"
+    mysql -uroot -p$MYSQL_ROOT_PASSWORD -e "CREATE DATABASE $MYSQL_DATABASE; GRANT ALL PRIVILEGES ON ${MYSQL_DATABASE}.* TO $MYSQL_USER@'%' IDENTIFIED BY '$MYSQL_PASSWORD'; FLUSH PRIVILEGES;"
     # allow mysql cli for root
     mv /root/.my.cnf.sample /root/.my.cnf
     sed -i "s/ADDED_BY_START.SH/$MYSQL_ROOT_PASSWORD/" /root/.my.cnf
@@ -185,8 +187,14 @@ if [[ ! -f $www/sites/default/settings.php ]] && [[ ! -f /drupal-db-pw.txt ]]   
       echo "-- git submodule and update"
         git submodule init
         git submodule update
+        if [ -f "composer.json" ]
+        then
+        echo "composer install"
+        composer install
+        fi
 
     elif [[ ${DRUPAL_VERSION} ]]; then
+      echo "43"
       echo "43" > $buildstat
       mkdir /var/tmp/drupal-install && cd /var/tmp/drupal-install
       echo "-- download ${DRUPAL_VERSION} with drush"
@@ -196,8 +204,7 @@ if [[ ! -f $www/sites/default/settings.php ]] && [[ ! -f /drupal-db-pw.txt ]]   
       rmdir /var/tmp/drupal-install/drupal
       cd $www
       chmod 755 sites/default; mkdir sites/default/files; chown -R www-data:www-data sites/default/files;
-
-    else 
+    else
       # quickest: pull in drupal already at the image stage
       echo "-- download drupal: copy the version included with this image "
       (cd /tmp/drupal && tar cf - .[a-zA-Z0-9]* *) | (cd $www && tar xf -)
@@ -221,7 +228,9 @@ if [[ ! -f $www/sites/default/settings.php ]] && [[ ! -f /drupal-db-pw.txt ]]   
     cd $www/sites/default || exit -1
     echo "05. -- Installing Drupal with profile=${DRUPAL_INSTALL_PROFILE} site-name=${DRUPAL_SITE_NAME} "
     #drush site-install standard -y --account-name=admin --account-pass=admin --db-url="mysqli://drupal:${MYSQL_PASSWORD}@localhost:3306/drupal"
-    drush site-install ${DRUPAL_INSTALL_PROFILE} -y --account-name=${DRUPAL_ADMIN} --account-pass="${DRUPAL_ADMIN_PW}" --account-mail="${DRUPAL_ADMIN_EMAIL}" --site-name="${DRUPAL_SITE_NAME}" --site-mail="${DRUPAL_SITE_EMAIL}"  --db-url="mysqli://${MYSQL_USER}:${MYSQL_PASSWORD}@${MYSQL_HOST}:3306/${MYSQL_DATABASE}"
+    if [[ ${DRUPAL_VERSION} -ne "drupal-6" ]]; then
+        drush site-install ${DRUPAL_INSTALL_PROFILE} -y --account-name=${DRUPAL_ADMIN} --account-pass="${DRUPAL_ADMIN_PW}" --account-mail="${DRUPAL_ADMIN_EMAIL}" --site-name="${DRUPAL_SITE_NAME}" --site-mail="${DRUPAL_SITE_EMAIL}"  --db-url="mysqli://${MYSQL_USER}:${MYSQL_PASSWORD}@${MYSQL_HOST}:3306/${MYSQL_DATABASE}"
+    fi
     if [[ $? -ne 0 ]]; then
       echo "-- ERROR: drush site-install failed";
       echo drush site-install ${DRUPAL_INSTALL_PROFILE} -y --account-name=${DRUPAL_ADMIN} --account-pass="${DRUPAL_ADMIN_PW}" --account-mail="${DRUPAL_ADMIN_EMAIL}" --site-name="${DRUPAL_SITE_NAME}" --site-mail="${DRUPAL_SITE_EMAIL}"  --db-url="mysqli://${MYSQL_USER}:HIDDEN@${MYSQL_HOST}:3306/${MYSQL_DATABASE}"
@@ -265,7 +274,7 @@ if [[ ! -f $www/sites/default/settings.php ]] && [[ ! -f /drupal-db-pw.txt ]]   
 
   if [[ ${DRUPAL_FINAL_CMD} ]]; then
     echo "65" > $buildstat
-    echo "-- Run custom comand DRUPAL_FINAL_CMD:"
+    echo "-- Run _ comand DRUPAL_FINAL_CMD:"
     # todo security discussion: allows ANY command to be executed, giving power!
     # alternatively one could prefix it with drush and strip dodgy characters 
     # e.g. "!$|;&", but then it wont be as flexible!
@@ -286,6 +295,7 @@ if [[ ! -f $www/sites/default/settings.php ]] && [[ ! -f /drupal-db-pw.txt ]]   
 
 
   echo "08. Drupal site installation finished. Starting processes via supervisor."
+
   echo "80" > $buildstat
   ## </drupal>
   fi
@@ -330,7 +340,9 @@ fi
 # Is a custom script visible (can be added by inherited images)
 # If any building is done in there, augment $buildstat there too.
 if [ -x /custom.sh ] ; then
-  . /custom.sh
+  /custom.sh
+else
+  echo "no custom"
 fi
 
 # Create log that can be written to in the running container, and visible in the
