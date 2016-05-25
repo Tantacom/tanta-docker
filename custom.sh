@@ -57,12 +57,145 @@
         mysql -u ${MYSQL_USER} -p${MYSQL_PASSWORD} --host=${MYSQL_HOST} ${MYSQL_DATABASE} -e'UPDATE tan_users SET PASS=MD5("${DRUPAL_ADMIN_PW}") WHERE uid=1'
         echo "enable short_open tags"
         sed -i 's/short_open_tag = Off/short_open_tag = On/g' /etc/php5/apache2/php.ini
+        if [[ ! -d ./sites/default/files ]]; then
+            mkdir ./sites/default/files
+        fi
         cp -R /files/tanta-6/* ./sites/default/files/
+        chown -R www-data.www-data ./sites/default/files/
+        if [ ! -f 'sites/default/settings.php' ]; then
+            touch ./sites/default/settings.php
+        fi
         cat > ./sites/default/settings.php << EOF
 <?php
 \$db_url = 'mysql://${MYSQL_USER}:${MYSQL_PASSWORD}@${MYSQL_HOST}/${MYSQL_DATABASE}';
 \$db_prefix = 'tan_';
 EOF
+if [[ ! -f .htaccess ]]; then
+        echo "add .htaccess"
+        cat > .htaccess << EOF
+##
+## Apache/PHP/Drupal settings:
+##
+#
+## Protect files and directories from prying eyes.
+#<FilesMatch "\.(engine|inc|info|install|make|module|profile|test|po|sh|.*sql|theme|tpl(\.php)?|xtmpl|svn-base)$|^(code-style\.pl|Entries.*|Repository|Root|Tag|Template|all-wcprops|entries|format)$">
+#  Order allow,deny
+#</FilesMatch>
+#
+## Don't show directory listings for URLs which map to a directory.
+#Options -Indexes
+#
+## Follow symbolic links in this directory.
+#Options +FollowSymLinks
+#
+## Make Drupal handle any 404 errors.
+#ErrorDocument 404 /index.php
+#
+## Force simple error message for requests for non-existent favicon.ico.
+#<Files favicon.ico>
+#  # There is no end quote below, for compatibility with Apache 1.3.
+#  ErrorDocument 404 "The requested file favicon.ico was not found.
+#</Files>
+#
+## Set the default handler.
+#DirectoryIndex index.php
+#
+## Override PHP settings. More in sites/default/settings.php
+## but the following cannot be changed at runtime.
+#
+## PHP 4, Apache 1.
+#<IfModule mod_php4.c>
+#  php_value magic_quotes_gpc                0
+#  php_value register_globals                0
+#  php_value session.auto_start              0
+#  php_value mbstring.http_input             pass
+#  php_value mbstring.http_output            pass
+#  php_value mbstring.encoding_translation   0
+#</IfModule>
+#
+## PHP 4, Apache 2.
+#<IfModule sapi_apache2.c>
+#  php_value magic_quotes_gpc                0
+#  php_value register_globals                0
+#  php_value session.auto_start              0
+#  php_value mbstring.http_input             pass
+#  php_value mbstring.http_output            pass
+#  php_value mbstring.encoding_translation   0
+#</IfModule>
+#
+## PHP 5, Apache 1 and 2.
+#<IfModule mod_php5.c>
+#  php_value magic_quotes_gpc                0
+#  php_value register_globals                0
+#  php_value session.auto_start              0
+#  php_value mbstring.http_input             pass
+#  php_value mbstring.http_output            pass
+#  php_value mbstring.encoding_translation   0
+#</IfModule>
+#
+## Requires mod_expires to be enabled.
+#<IfModule mod_expires.c>
+#  # Enable expirations.
+#  ExpiresActive On
+#
+#  # Cache all files for 2 weeks after access (A).
+#  ExpiresDefault A1209600
+#
+#  <FilesMatch \.php$>
+#    # Do not allow PHP scripts to be cached unless they explicitly send cache
+#    # headers themselves. Otherwise all scripts would have to overwrite the
+#    # headers set by mod_expires if they want another caching behavior. This may
+#    # fail if an error occurs early in the bootstrap process, and it may cause
+#    # problems if a non-Drupal PHP file is installed in a subdirectory.
+#    ExpiresActive Off
+#  </FilesMatch>
+#</IfModule>
+#
+## Various rewrite rules.
+#<IfModule mod_rewrite.c>
+#  RewriteEngine on
+#
+#  # If your site can be accessed both with and without the 'www.' prefix, you
+#  # can use one of the following settings to redirect users to your preferred
+#  # URL, either WITH or WITHOUT the 'www.' prefix. Choose ONLY one option:
+#  #
+#  # To redirect all users to access the site WITH the 'www.' prefix,
+#  # (http://example.com/... will be redirected to http://www.example.com/...)
+#  # adapt and uncomment the following:
+#  # RewriteCond %{HTTP_HOST} ^example\.com$ [NC]
+#  # RewriteRule ^(.*)$ http://www.example.com/$1 [L,R=301]
+#  #
+#  # To redirect all users to access the site WITHOUT the 'www.' prefix,
+#  # (http://www.example.com/... will be redirected to http://example.com/...)
+#  # uncomment and adapt the following:
+#  # RewriteCond %{HTTP_HOST} ^www\.example\.com$ [NC]
+#  # RewriteRule ^(.*)$ http://example.com/$1 [L,R=301]
+#
+#  # Modify the RewriteBase if you are using Drupal in a subdirectory or in a
+#  # VirtualDocumentRoot and the rewrite rules are not working properly.
+#  # For example if your site is at http://example.com/drupal uncomment and
+#  # modify the following line:
+#  # RewriteBase /drupal
+#  #
+#  # If your site is running in a VirtualDocumentRoot at http://example.com/,
+#  # uncomment the following line:
+#  # RewriteBase /
+#
+#  Redirect 301 /el-blog-de-tanta http://blog.tantacom.com/
+#
+#  # Rewrite URLs of the form 'x' to the form 'index.php?q=x'.
+#  RewriteCond %{REQUEST_FILENAME} !-f
+#  RewriteCond %{REQUEST_FILENAME} !-d
+#  RewriteCond %{REQUEST_URI} !=/favicon.ico
+#  RewriteRule ^(.*)$ index.php?q=$1 [L,QSA]
+#</IfModule>
+#
+## $Id$
+<IfModule mod_rewrite.c>
+ Redirect 301 /el-blog-de-tanta http://blog.tantacom.com/
+</IfModule>
+EOF
+fi
     else
     echo "reseting admin user pass for d8"
      sed -i "s/^[ \t]*'password'.*/  \'password\' => \'${MYSQL_PASSWORD}\',/" $www/sites/default/settings.php
@@ -78,9 +211,4 @@ EOF
     fi
 
     killall mysqld
-
-
-    if [[ ! -d "vendor" ]]; then
-    composer install
-    fi
   fi
