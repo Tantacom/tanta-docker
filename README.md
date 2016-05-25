@@ -1,7 +1,15 @@
-docker-drupal
+tanta-docker
 ==============
 
-Completely automated Drupal install, with lots of flexibility!
+> This is a fork of the fantastic work made by [Sean Boran](https://github.com/Boran/docker-drupal)
+> It's it thought to distribute a image or our company site (http://www.tantacom.com)
+> It only adds the capability of import a database one the install process is done, but we still
+> need to think how to improve this cause it take years to complete. 
+
+> If you have arrived here looking for a drupal container, please go to [Docker-Drupal](https://github.com/Boran/docker-drupal)
+
+> Following is just a copy of Docker-Drupal Readme.md with some example on how to work with a custom .sql script mainly
+> for our devs. 
 
 Creates a [Docker](http://docker.io) container for Drupal 7 or 8, using Linux (Ubuntu 14.04), Apache and MySQL:
 - Install Ubuntu 14.04/Apache/Php/Mysql with supervisord startup scripts
@@ -13,24 +21,24 @@ Creates a [Docker](http://docker.io) container for Drupal 7 or 8, using Linux (U
 - Most drupal install settings are environment settings when creating a container from the image. See below.
 
 # Installation
-Well, install docker if you dont have it yet (see the bottom), then just use it.
+Install docker if you dont have it yet.
 
 # Usage
 
 ## Create a running container
 
 Simplest form, start a D7 container:
-> docker run -td boran/drupal
+> docker run -td tantacom/tanta-docker
 
 Start a D8 container:
-> docker run -td -e "DRUPAL_VERSION=drupal-8" boran/drupal
+> docker run -td -e "DRUPAL_VERSION=drupal-8" tantacom/tanta-docker
 
 Start a D7 container, interactive shell (run /start.sh when you have the shell to start lamp):
-> docker run -ti boran/drupal /bin/bash
+> docker run -ti tantacom/tanta-docker /bin/bash
 
 Name the container (--name drupal8003) and give it a public port (8003).
 Then visit http://MYHOST.com:8003/
-> docker run -td -p 8003:80 --name drupal8003 boran/drupal
+> docker run -td -p 8003:80 --name drupal8003 tantacom/tanta-docker
 
 ## Troubleshooting 
 - Examine log of the container started above (named drupal8003)
@@ -45,23 +53,52 @@ Then visit http://MYHOST.com:8003/
 
 
 - Create a new container and only run a shell
-  `docker run -ti boran/drupal /bin/bash`
+  `docker run -ti tantacom/tanta-docker /bin/bash`
 
 ## Creating more complex containers
 
 To run the container with "foo" as the admin password:
-> docker run -td -p 8003:80 -e "DRUPAL_ADMIN_PW=foo" -e "DRUPAL_SITE_NAME=My Super site" --name drupal8003 boran/drupal
+> docker run -td -p 8003:80 -e "DRUPAL_ADMIN_PW=foo" -e "DRUPAL_SITE_NAME=My Super site" --name drupal8003 tantacom/tanta-docker
 
 Drupal 8, set a password and title, mysql DB in on 10.1.1.1 and mount /var/www/html from /opt/foo
-> docker run -td -p 8004:80 --name bc -e "DRUPAL_VERSION=drupal-8" -e "DRUPAL_ADMIN_PW=foo" -e "DRUPAL_SITE_NAME=My Super site" -e "MYSQL_HOST=10.1.1.1" -e "MYSQL_DATABASE=drupal_site1" -e "MYSQL_USER=drupal_site1" -e "MYSQL_PASSWORD=pass4drupal_site1" -v /opt/foo:/var/www/html  boran/drupal
+> docker run -td -p 8004:80 --name bc -e "DRUPAL_VERSION=drupal-8" -e "DRUPAL_ADMIN_PW=foo" -e "DRUPAL_SITE_NAME=My Super site" -e "MYSQL_HOST=10.1.1.1" -e "MYSQL_DATABASE=drupal_site1" -e "MYSQL_USER=drupal_site1" -e "MYSQL_PASSWORD=pass4drupal_site1" -v /opt/foo:/var/www/html  tantacom/tanta-docker
 
 Download drupal+website on the develop branch from a https git repo:
-> docker run -td -p 8003:80 -e "DRUPAL_GIT_REPO=https://USER:PASSWORD@example.org/path/something" -e "DRUPAL_GIT_BRANCH=devop" --name drupal8003 boran/drupal
+> docker run -td -p 8003:80 -e "DRUPAL_GIT_REPO=https://USER:PASSWORD@example.org/path/something" -e "DRUPAL_GIT_BRANCH=devop" --name drupal8003 tantacom/tanta-docker
 
 To run a custom install profile, set DRUPAL_INSTALL_REPO and DRUPAL_INSTALL_PROFILE accordingly.
 
 Download drupal+modules according to a make file:
-> docker run -td -p 8003:80 -e "DRUPAL_MAKE_DIR=drupal-make1" -e "DRUPAL_MAKE_REPO=https://github.com/Boran/drupal-make1" -e "DRUPAL_MAKE_CMD=${DRUPAL_MAKE_DIR}/${DRUPAL_MAKE_DIR}.make ${DRUPAL_DOCROOT}" --name drupal8003 boran/drupal`
+> docker run -td -p 8003:80 -e "DRUPAL_MAKE_DIR=drupal-make1" -e "DRUPAL_MAKE_REPO=https://github.com/tantacom/tanta-docker-make1" -e "DRUPAL_MAKE_CMD=${DRUPAL_MAKE_DIR}/${DRUPAL_MAKE_DIR}.make ${DRUPAL_DOCROOT}" --name drupal8003 tantacom/tanta-docker`
+
+## For Tanta Devs
+
+Crear contenedor con la web actual (drupal 6) importando la base de datos actual
+
+```
+docker run -t -p 8006:80 -p 33066:3306 -e "DRUPAL_VERSION=drupal-6" -e "CUSTOM_DB=/tantaweb.sql" -e "DRUPAL_GIT_REPO=https://[github_user]:[github_pass]@github.com/tantacom/tantacom-web" -e "DRUPAL_GIT_BRANCH=6.x" --name tanta6 -v /home/www/tanta6:/var/www/html tantacom/tanta-docker
+```
+
+Crear contenedor con el nuevo desarrollo (d8)
+
+```
+docker run -t -p 8006:80 -p 33066:3306 -e "DRUPAL_VERSION=drupal-8" -e "CUSTOM_DB=/tantacom-8.sql" -e "DRUPAL_GIT_REPO=https://[github_user]:[github_pass]@github.com/tantacom/tantacom-web" -e "DRUPAL_GIT_BRANCH=drupal-8" --name tanta6 -v /home/www/tanta8:/var/www/html tantacom/tanta-docker
+```
+
+
+Donde:
+* 8006 es el puerto desde el que podrás acceder al desarrollo (http://localhost:8006)
+* 33006 puerto por el que podrás acceder al mysql del contenedor
+* github_user: tu usuario en github
+* github_pass: tu pass en github
+
+Si quieres abrir una shell en cualquiera de los containers te bastaría con 
+
+```
+docker exec -ti tanta6 /bin/bash
+```
+
+Donde tanta6 será el valor que hayas dado al parámetro `--name` cuando ejecutaste el `docker run`
 
 ## Parameter reference
 Environment parameters, defaults are as follows, commented values are not set by default:
@@ -80,12 +117,12 @@ Environment parameters, defaults are as follows, commented values are not set by
     #DRUPAL_GIT_BRANCH master
 
     #DRUPAL_MAKE_DIR  drupal-make1
-    #DRUPAL_MAKE_REPO https://github.com/Boran/drupal-make1
+    #DRUPAL_MAKE_REPO https://github.com/tantacom/tanta-docker-make1
     #DRUPAL_MAKE_BRANCH master
     # Which will run:  drush make ${DRUPAL_MAKE_DIR}/${DRUPAL_MAKE_DIR}.make ${DRUPAL_DOCROOT}
     DRUPAL_INSTALL_PROFILE standard
     Specify the repo and the branch of the install profile:
-    # DRUPAL_INSTALL_REPO https://github.com/Boran/drupal-profile1.git
+    # DRUPAL_INSTALL_REPO https://github.com/tantacom/tanta-docker-profile1.git
     # DRUPAL_INSTALL_PROFILE_BRANCH master
 
     # Run a feature revert revert after installing, can be useful for default content
@@ -123,7 +160,7 @@ Download drupal+website on the master branch from a git repo via ssh with keys.
  * Then build the container mounting the SSH keys files under /root/gitwrap/id_rsa /root/gitwrap/id_rsa.pub
  * The example repo is git@bitbucket.org:/MYUSER/MYREPO.git
 
-`docker run -td -p 8003:80 -e "DRUPAL_GIT_SSH=/gitwrap.sh" -e "DRUPAL_GIT_REPO=git@bitbucket.org:/MYUSER/MYREPO.git" -v /root/boran-drupal/ssh/id_rsa:/root/gitwrap/id_rsa -v /root/boran-drupal/ssh/id_rsa.pub:/root/gitwrap/id_rsa.pub -v /root/boran-drupal/ssh/known_hosts/root/gitwrap/known_hosts --name drupal8003 boran/drupal`
+`docker run -td -p 8003:80 -e "DRUPAL_GIT_SSH=/gitwrap.sh" -e "DRUPAL_GIT_REPO=git@bitbucket.org:/MYUSER/MYREPO.git" -v /root/boran-drupal/ssh/id_rsa:/root/gitwrap/id_rsa -v /root/boran-drupal/ssh/id_rsa.pub:/root/gitwrap/id_rsa.pub -v /root/boran-drupal/ssh/known_hosts/root/gitwrap/known_hosts --name drupal8003 tantacom/tanta-docker`
 
 
 # Special cases
@@ -176,40 +213,12 @@ sudo apt-get update -qq && sudo apt-get -yq install lxc-docker
 ```
 See also [using docker] (https://docs.docker.com/userguide/usingdocker/)
 
-
-# Development
-### Building an image (e.g. inheriting from this one)
-
-Some changes can be made by creating a new image based on boran/drupal
- - download a copy of drupal to a subfolder called drupal
- - Set new defaults for the "DRUPAL*" enviroment variables  
- - Include a custom.sh, which (if it exists) is run just before the end of start.sh.
-   this could be used to run for example puppet, or other provisioning tool.
-
-e.g. create a site specific inherited image with additional stuff such as cron, postfix, syslog and puppet. 
-
-### Building an image (e.g. changing this one)
-  Grab sources from Github
- - download a copy of drupal to a subfolder called files/drupal-7
-```
-  cd files
-  rm -rf drupal-7  # incase an old version is there
-  drush dl drupal 
-  mv drupal-7.* drupal-7 
-  # or
-  wget http://ftp.drupal.org/files/projects/drupal-7.39.tar.gz
-  tar xf drupal-7.39.tar.gz 
-  mv drupal-7.39 drupal-7
-  cd ..
-```
- - then rebuild:
-```
 # Interative: stop/delete/rebuild:
 docker stop drupal8003; docker rm drupal8003; 
-docker build -t="boran/drupal" .
+docker build -t="tantacom/tanta-docker" .
 
 # Run and look at logs:
-docker run -td -p 8003:80 --name drupal8003 boran/drupal
+docker run -td -p 8003:80 --name drupal8003 tantacom/tanta-docker
 docker logs -f drupal8003
 ```
 
