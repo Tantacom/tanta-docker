@@ -6,7 +6,8 @@ tanta-docker
 > It only adds the capability of import a database one the install process is done, but we still
 > need to think how to improve this cause it take years to complete. 
 
-> If you have arrived here looking for a drupal container, please go to [Docker-Drupal](https://github.com/Boran/docker-drupal)
+> If you have arrived here looking for a drupal container, please go to [Docker-Drupal](https://github.com/Boran/docker-drupal),
+as we're just starting with Docker and want to have this merely for testing. 
 
 > Following is just a copy of Docker-Drupal Readme.md with some example on how to work with a custom .sql script mainly
 > for our devs. 
